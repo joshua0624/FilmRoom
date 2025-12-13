@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+
+  createdTeams      Team[]         @relation("TeamCreator")
+  teamMemberships   TeamMember[]
+  createdSessions   FilmSession[]  @relation("SessionCreator")
+  markedPoints      Point[]
+  createdNotes      Note[]
+  activeViewers     ActiveViewer[]
+
+  @@map("users")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  color     String
+  creatorId String
+  createdAt DateTime @default(now())
+
+  creator       User          @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  members       TeamMember[]
+  players       Player[]
+  sessionsAsA   FilmSession[] @relation("TeamA")
+  sessionsAsB   FilmSession[] @relation("TeamB")
+
+  @@map("teams")
+}
+
+model TeamMember {
+  teamId   String
+  userId   String
+  isAdmin  Boolean  @default(false)
+  joinedAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@map("team_members")
+}
+
+model Player {
+  id     String @id @default(cuid())
+  teamId String
+  name   String
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("players")
+}
+
+model FilmSession {
+  id              String    @id @default(cuid())
+  youtubeUrl      String
+  teamAId         String?
+  teamBId         String?
+  teamACustomName String?
+  teamBCustomName String?
+  teamAColor      String
+  teamBColor      String
+  creatorId       String
+  createdAt       DateTime  @default(now())
+  shareToken      String    @unique
+
+  teamA       Team?         @relation("TeamA", fields: [teamAId], references: [id], onDelete: SetNull)
+  teamB       Team?         @relation("TeamB", fields: [teamBId], references: [id], onDelete: SetNull)
+  creator     User          @relation("SessionCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  points      Point[]
+  notes       Note[]
+  activeViewers ActiveViewer[]
+
+  @@map("film_sessions")
+}
+
+model Point {
+  id              String   @id @default(cuid())
+  sessionId       String
+  timestamp       Decimal  @db.Decimal(10, 2)
+  teamId          String?
+  teamIdentifier  String   // "A" or "B"
+  scorerName      String?
+  assisterName    String?
+  notes           String?
+  markedByUserId  String
+  createdAt       DateTime @default(now())
+
+  session     FilmSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  markedBy    User        @relation(fields: [markedByUserId], references: [id], onDelete: Cascade)
+
+  @@map("points")
+}
+
+model Note {
+  id              String   @id @default(cuid())
+  sessionId       String
+  timestamp       Decimal  @db.Decimal(10, 2)
+  title           String
+  content         String
+  isPrivate       Boolean  @default(false)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  session  FilmSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy User       @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@map("notes")
+}
+
+model ActiveViewer {
+  sessionId    String
+  userId       String
+  lastActive   DateTime @default(now())
+  canMarkPoints Boolean @default(false)
+  joinedAt     DateTime @default(now())
+
+  session FilmSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, userId])
+  @@map("active_viewers")
+}
+
