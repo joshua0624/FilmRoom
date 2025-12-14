@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
+import { Trash2 } from 'lucide-react';
 
 interface SessionCardProps {
   session: {
@@ -33,13 +34,42 @@ interface SessionCardProps {
       notes: number;
     };
   };
+  userId?: string;
+  onDelete?: (sessionId: string) => void;
 }
 
-export const SessionCard = ({ session }: SessionCardProps) => {
+export const SessionCard = ({ session, userId, onDelete }: SessionCardProps) => {
   const router = useRouter();
+  const isCreator = userId === session.creator.id;
 
   const handleClick = () => {
     router.push(`/sessions/${session.id}`);
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
+      return;
+    }
+
+    if (!onDelete) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/sessions/${session.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete session');
+      }
+
+      onDelete(session.id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete session');
+    }
   };
 
   const teamAName = session.teamA?.name || session.teamACustomName || 'Team A';
@@ -48,7 +78,7 @@ export const SessionCard = ({ session }: SessionCardProps) => {
   return (
     <div
       onClick={handleClick}
-      className="bg-bg-secondary border border-border rounded-lg p-6 cursor-pointer transition-all duration-200 hover:border-[#3d3d3d] hover:-translate-y-0.5"
+      className="bg-bg-secondary border border-border rounded-lg p-6 cursor-pointer transition-all duration-200 hover:border-[#3d3d3d] hover:-translate-y-0.5 relative"
       role="button"
       tabIndex={0}
       aria-label={`View session: ${teamAName} vs ${teamBName}`}
@@ -59,6 +89,24 @@ export const SessionCard = ({ session }: SessionCardProps) => {
         }
       }}
     >
+      {isCreator && onDelete && (
+        <button
+          onClick={handleDelete}
+          className="absolute top-4 right-4 p-2 text-text-tertiary hover:text-red-500 transition-colors rounded-md hover:bg-red-500/10"
+          aria-label="Delete session"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDelete(e as unknown as React.MouseEvent);
+            }
+          }}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+
       <div className="flex items-center gap-3 mb-4">
         <div
           className="w-4 h-4 rounded-full flex-shrink-0"

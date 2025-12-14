@@ -12,7 +12,27 @@ export async function GET(request: NextRequest) {
 
     const sessions = await prisma.filmSession.findMany({
       where: {
-        creatorId: session.user.id,
+        OR: [
+          { creatorId: session.user.id },
+          {
+            teamA: {
+              members: {
+                some: {
+                  userId: session.user.id,
+                },
+              },
+            },
+          },
+          {
+            teamB: {
+              members: {
+                some: {
+                  userId: session.user.id,
+                },
+              },
+            },
+          },
+        ],
       },
       include: {
         teamA: {

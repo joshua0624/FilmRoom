@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { CreateSessionModal } from './CreateSessionModal';
 import { SessionCard } from './SessionCard';
 import { ListSkeleton } from '@/components/common/SkeletonLoader';
@@ -40,6 +41,7 @@ interface FilmSession {
 
 export const SessionsList = () => {
   const router = useRouter();
+  const { data: session } = useSession();
   const [sessions, setSessions] = useState<FilmSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,6 +70,10 @@ export const SessionsList = () => {
   const handleCreateSuccess = (sessionId: string) => {
     fetchSessions();
     router.push(`/sessions/${sessionId}`);
+  };
+
+  const handleDelete = (sessionId: string) => {
+    setSessions((prevSessions) => prevSessions.filter((s) => s.id !== sessionId));
   };
 
   if (isLoading) {
@@ -113,8 +119,13 @@ export const SessionsList = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {sessions.map((session) => (
-            <SessionCard key={session.id} session={session} />
+          {sessions.map((sessionItem) => (
+            <SessionCard
+              key={sessionItem.id}
+              session={sessionItem}
+              userId={session?.user?.id}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}
