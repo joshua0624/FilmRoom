@@ -1,49 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hashPassword, getUserByUsername, createUser } from '@/lib/auth';
-import { z } from 'zod';
+import { getSession } from '@/lib/session';
+import { prisma } from '@/lib/prisma';
+import { randomBytes } from 'crypto';
 
-const signupSchema = z.object({
-  username: z.string().min(3).max(20),
-  password: z.string().min(6),
-});
-
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { username, password } = signupSchema.parse(body);
-
-    // Check if user already exists
-    const existingUser = await getUserByUsername(username);
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Username already taken' },
-        { status: 400 }
-      );
+    const session = await getSession();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Hash password and create user
-    const passwordHash = await hashPassword(password);
-    await createUser(username, passwordHash);
+    const sessions = await prisma.filmSession.findMany({
+      where: {
+        creatorId: session.user.id,
+      },
+      include: {
+        teamA: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+        },
+        teamB: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        _count: {
+          select: {
+            points: true,
+            notes: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
-    return NextResponse.json(
-      { message: 'User created successfully' },
-      { status: 201 }
-    );
+    return NextResponse.json(sessions);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    console.error('Signup error:', error);
+    console.error('Error fetching sessions:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch sessions' },
       { status: 500 }
     );
   }
 }
-
-
-

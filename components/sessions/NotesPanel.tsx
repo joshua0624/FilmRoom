@@ -5,16 +5,18 @@ import { EditNoteModal } from './EditNoteModal';
 
 interface Note {
   id: string;
+  sessionId: string;
   timestamp: number;
   title: string;
   content: string;
   isPrivate: boolean;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
   createdBy: {
     id: string;
     username: string;
   };
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface NotesPanelProps {

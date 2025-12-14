@@ -51,7 +51,11 @@ export const TeamsList = () => {
   if (isLoading) {
     return (
       <div className="px-4 py-6 sm:px-0">
-        <ListSkeleton count={5} />
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-24 bg-slate-800 rounded-lg animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }

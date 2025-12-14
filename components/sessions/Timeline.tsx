@@ -12,10 +12,17 @@ interface Point {
 
 interface Note {
   id: string;
+  sessionId: string;
   timestamp: number;
-  isPrivate?: boolean;
-  createdBy?: {
+  title: string;
+  content: string;
+  isPrivate: boolean;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
     id: string;
+    username: string;
   };
 }
 
