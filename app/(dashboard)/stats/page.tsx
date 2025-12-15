@@ -10,6 +10,10 @@ interface PlayerStats {
   goals: number;
   assists: number;
   gamesPlayed: number;
+  pointsPerGame?: number;
+  assistsPerGame?: number;
+  singleGameValue?: number;
+  sessionId?: string;
 }
 
 export default function StatsPage() {
@@ -21,6 +25,12 @@ export default function StatsPage() {
     endDate: '',
     opponentTeamId: '',
     sortBy: 'goals' as 'goals' | 'assists',
+    minPointsPerGame: '',
+    maxPointsPerGame: '',
+    minAssistsPerGame: '',
+    maxAssistsPerGame: '',
+    viewMode: 'cumulative' as 'cumulative' | 'singleGame',
+    singleGameCategory: 'points' as 'points' | 'assists' | 'combined',
   });
 
   const fetchStats = async () => {
@@ -39,6 +49,22 @@ export default function StatsPage() {
         params.append('opponentTeamId', filters.opponentTeamId);
       }
       params.append('sortBy', filters.sortBy);
+      if (filters.minPointsPerGame) {
+        params.append('minPointsPerGame', filters.minPointsPerGame);
+      }
+      if (filters.maxPointsPerGame) {
+        params.append('maxPointsPerGame', filters.maxPointsPerGame);
+      }
+      if (filters.minAssistsPerGame) {
+        params.append('minAssistsPerGame', filters.minAssistsPerGame);
+      }
+      if (filters.maxAssistsPerGame) {
+        params.append('maxAssistsPerGame', filters.maxAssistsPerGame);
+      }
+      params.append('viewMode', filters.viewMode);
+      if (filters.viewMode === 'singleGame') {
+        params.append('singleGameCategory', filters.singleGameCategory);
+      }
 
       const response = await fetch(`/api/stats?${params.toString()}`);
       if (!response.ok) {
@@ -92,7 +118,11 @@ export default function StatsPage() {
             </div>
           </div>
         ) : (
-          <PlayerLeaderboard stats={stats} />
+          <PlayerLeaderboard 
+            stats={stats} 
+            viewMode={filters.viewMode}
+            singleGameCategory={filters.singleGameCategory}
+          />
         )}
       </main>
     </div>

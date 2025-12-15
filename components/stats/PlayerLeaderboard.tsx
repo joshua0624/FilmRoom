@@ -5,13 +5,19 @@ interface PlayerStats {
   goals: number;
   assists: number;
   gamesPlayed: number;
+  pointsPerGame?: number;
+  assistsPerGame?: number;
+  singleGameValue?: number;
+  sessionId?: string;
 }
 
 interface PlayerLeaderboardProps {
   stats: PlayerStats[];
+  viewMode: 'cumulative' | 'singleGame';
+  singleGameCategory: 'points' | 'assists' | 'combined';
 }
 
-export const PlayerLeaderboard = ({ stats }: PlayerLeaderboardProps) => {
+export const PlayerLeaderboard = ({ stats, viewMode, singleGameCategory }: PlayerLeaderboardProps) => {
   if (stats.length === 0) {
     return (
       <div className="bg-bg-secondary border border-border rounded-lg p-8 text-center text-text-secondary">
@@ -19,6 +25,15 @@ export const PlayerLeaderboard = ({ stats }: PlayerLeaderboardProps) => {
       </div>
     );
   }
+
+  const getCategoryLabel = () => {
+    if (viewMode === 'singleGame') {
+      if (singleGameCategory === 'points') return 'Points in Game';
+      if (singleGameCategory === 'assists') return 'Assists in Game';
+      if (singleGameCategory === 'combined') return 'Points + Assists';
+    }
+    return '';
+  };
 
   return (
     <div className="bg-bg-secondary border border-border rounded-lg overflow-hidden">
@@ -38,24 +53,61 @@ export const PlayerLeaderboard = ({ stats }: PlayerLeaderboardProps) => {
               >
                 Player Name
               </th>
-              <th
-                scope="col"
-                className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
-              >
-                Goals
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
-              >
-                Assists
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
-              >
-                Games Played
-              </th>
+              {viewMode === 'singleGame' ? (
+                <>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    {getCategoryLabel()}
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Goals
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Assists
+                  </th>
+                </>
+              ) : (
+                <>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Goals
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Assists
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Games Played
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Points/Game
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Assists/Game
+                  </th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -89,15 +141,37 @@ export const PlayerLeaderboard = ({ stats }: PlayerLeaderboardProps) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                     {player.playerName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-accent-secondary text-right">
-                    {player.goals}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
-                    {player.assists}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
-                    {player.gamesPlayed}
-                  </td>
+                  {viewMode === 'singleGame' ? (
+                    <>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-accent-secondary text-right">
+                        {player.singleGameValue ?? 0}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
+                        {player.goals}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
+                        {player.assists}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-accent-secondary text-right">
+                        {player.goals}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
+                        {player.assists}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
+                        {player.gamesPlayed}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
+                        {player.pointsPerGame?.toFixed(2) ?? '0.00'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
+                        {player.assistsPerGame?.toFixed(2) ?? '0.00'}
+                      </td>
+                    </>
+                  )}
                 </tr>
               );
             })}
@@ -107,6 +181,7 @@ export const PlayerLeaderboard = ({ stats }: PlayerLeaderboardProps) => {
     </div>
   );
 };
+
 
 
 
