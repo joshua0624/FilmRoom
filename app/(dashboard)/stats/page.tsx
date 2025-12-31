@@ -23,15 +23,10 @@ export default function StatsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: '',
+    weeks: [] as string[],
     teamId: '',
     opponentTeamId: '',
-    sortBy: 'goals' as 'goals' | 'assists',
-    minPointsPerGame: '',
-    maxPointsPerGame: '',
-    minAssistsPerGame: '',
-    maxAssistsPerGame: '',
+    sortBy: 'goals' as 'goals' | 'assists' | 'combined' | 'goalsPerGame' | 'assistsPerGame' | 'combinedPerGame',
     viewMode: 'cumulative' as 'cumulative' | 'singleGame',
     singleGameCategory: 'points' as 'points' | 'assists' | 'combined',
   });
@@ -51,28 +46,13 @@ export default function StatsPage() {
       if (filters.teamId) {
         params.append('teamId', filters.teamId);
       }
-      if (filters.startDate) {
-        params.append('startDate', filters.startDate);
-      }
-      if (filters.endDate) {
-        params.append('endDate', filters.endDate);
+      if (filters.weeks.length > 0) {
+        params.append('weeks', filters.weeks.join(','));
       }
       if (filters.opponentTeamId) {
         params.append('opponentTeamId', filters.opponentTeamId);
       }
       params.append('sortBy', filters.sortBy);
-      if (filters.minPointsPerGame) {
-        params.append('minPointsPerGame', filters.minPointsPerGame);
-      }
-      if (filters.maxPointsPerGame) {
-        params.append('maxPointsPerGame', filters.maxPointsPerGame);
-      }
-      if (filters.minAssistsPerGame) {
-        params.append('minAssistsPerGame', filters.minAssistsPerGame);
-      }
-      if (filters.maxAssistsPerGame) {
-        params.append('maxAssistsPerGame', filters.maxAssistsPerGame);
-      }
       params.append('viewMode', filters.viewMode);
       if (filters.viewMode === 'singleGame') {
         params.append('singleGameCategory', filters.singleGameCategory);

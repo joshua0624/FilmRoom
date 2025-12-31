@@ -14,12 +14,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const leagueId = searchParams.get('leagueId');
     const teamId = searchParams.get('teamId');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const weeksParam = searchParams.get('weeks');
     const opponentTeamId = searchParams.get('opponentTeamId');
-    const sortBy = searchParams.get('sortBy') || 'goals'; // 'goals' or 'assists'
-    const minPointsPerGame = searchParams.get('minPointsPerGame');
-    const maxPointsPerGame = searchParams.get('maxPointsPerGame');
+    const sortBy = searchParams.get('sortBy') || 'goals'; // 'goals', 'assists', or 'combined'
+    const minGoalsPerGame = searchParams.get('minGoalsPerGame');
+    const maxGoalsPerGame = searchParams.get('maxGoalsPerGame');
     const minAssistsPerGame = searchParams.get('minAssistsPerGame');
     const maxAssistsPerGame = searchParams.get('maxAssistsPerGame');
     const viewMode = searchParams.get('viewMode') || 'cumulative';
@@ -42,13 +41,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build date filter
-    const dateFilter: any = {};
-    if (startDate && startDate.trim() !== '') {
-      dateFilter.gte = new Date(startDate);
-    }
-    if (endDate && endDate.trim() !== '') {
-      dateFilter.lte = new Date(endDate);
+    // Build week filter
+    let weekFilter: any = undefined;
+    if (weeksParam && weeksParam.trim() !== '') {
+      const weeks = weeksParam.split(',')
+        .map(w => parseInt(w.trim()))
+        .filter(w => !isNaN(w) && w >= 1 && w <= 52);
+
+      if (weeks.length > 0) {
+        weekFilter = { in: weeks };
+      }
     }
 
     // Build session filter - include sessions with at least one preset roster
@@ -65,9 +67,9 @@ export async function GET(request: NextRequest) {
     // Build AND conditions array
     const andConditions: any[] = [baseFilter];
 
-    // Add date filter if provided
-    if (dateFilter.gte || dateFilter.lte) {
-      andConditions.push({ createdAt: dateFilter });
+    // Add week filter if provided
+    if (weekFilter) {
+      andConditions.push({ week: weekFilter });
     }
 
     // If opponent filter is specified, add it to the filter
@@ -369,14 +371,14 @@ export async function GET(request: NextRequest) {
       });
 
     // Filter by per-game averages
-    if (minPointsPerGame) {
-      const min = parseFloat(minPointsPerGame);
+    if (minGoalsPerGame) {
+      const min = parseFloat(minGoalsPerGame);
       if (!isNaN(min)) {
         stats = stats.filter((s) => s.pointsPerGame >= min);
       }
     }
-    if (maxPointsPerGame) {
-      const max = parseFloat(maxPointsPerGame);
+    if (maxGoalsPerGame) {
+      const max = parseFloat(maxGoalsPerGame);
       if (!isNaN(max)) {
         stats = stats.filter((s) => s.pointsPerGame <= max);
       }
@@ -398,6 +400,18 @@ export async function GET(request: NextRequest) {
     stats.sort((a, b) => {
       if (sortBy === 'assists') {
         return b.assists - a.assists || b.goals - a.goals;
+      } else if (sortBy === 'combined') {
+        const aCombined = a.goals + a.assists;
+        const bCombined = b.goals + b.assists;
+        return bCombined - aCombined;
+      } else if (sortBy === 'goalsPerGame') {
+        return b.pointsPerGame - a.pointsPerGame || b.assistsPerGame - a.assistsPerGame;
+      } else if (sortBy === 'assistsPerGame') {
+        return b.assistsPerGame - a.assistsPerGame || b.pointsPerGame - a.pointsPerGame;
+      } else if (sortBy === 'combinedPerGame') {
+        const aCombinedPerGame = a.pointsPerGame + a.assistsPerGame;
+        const bCombinedPerGame = b.pointsPerGame + b.assistsPerGame;
+        return bCombinedPerGame - aCombinedPerGame;
       }
       return b.goals - a.goals || b.assists - a.assists;
     });

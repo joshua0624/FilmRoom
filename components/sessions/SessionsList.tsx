@@ -18,6 +18,7 @@ interface FilmSession {
   teamAColor: string;
   teamBColor: string;
   createdAt: string;
+  week: number | null;
   shareToken: string;
   teamA: {
     id: string;
@@ -76,6 +77,14 @@ export const SessionsList = () => {
     setSessions((prevSessions) => prevSessions.filter((s) => s.id !== sessionId));
   };
 
+  const handleWeekUpdate = (sessionId: string, week: number | null) => {
+    setSessions((prevSessions) =>
+      prevSessions.map((s) =>
+        s.id === sessionId ? { ...s, week } : s
+      )
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="px-4 py-6 sm:px-0">
@@ -125,6 +134,7 @@ export const SessionsList = () => {
               session={sessionItem}
               userId={session?.user?.id}
               onDelete={handleDelete}
+              onWeekUpdate={handleWeekUpdate}
             />
           ))}
         </div>

@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
       teamBCustomName,
       teamAColor,
       teamBColor,
+      week,
     } = body;
 
     if (!youtubeUrl || !leagueId || !teamAColor || !teamBColor) {
@@ -141,6 +142,20 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid YouTube URL' },
         { status: 400 }
       );
+    }
+
+    // Validate week if provided
+    if (week !== null && week !== undefined) {
+      const weekNum = parseInt(week);
+      if (isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
+        return NextResponse.json(
+          { error: 'Week must be a number between 1 and 52' },
+          { status: 400 }
+        );
+      }
+      week = weekNum;
+    } else {
+      week = null;
     }
 
     // Validate team IDs if provided (must belong to the league)
@@ -207,6 +222,7 @@ export async function POST(request: NextRequest) {
         teamBColor,
         creatorId: session.user.id,
         shareToken,
+        week,
       },
       include: {
         teamA: {

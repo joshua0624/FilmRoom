@@ -80,6 +80,7 @@ model FilmSession {
   teamBColor      String
   creatorId       String
   leagueId        String
+  week            Int?
   createdAt       DateTime  @default(now())
   shareToken      String    @unique
 

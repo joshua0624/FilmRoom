@@ -10,28 +10,18 @@ interface Team {
 
 interface StatsFiltersProps {
   filters: {
-    startDate: string;
-    endDate: string;
+    weeks: string[];
     teamId: string;
     opponentTeamId: string;
-    sortBy: 'goals' | 'assists';
-    minPointsPerGame: string;
-    maxPointsPerGame: string;
-    minAssistsPerGame: string;
-    maxAssistsPerGame: string;
+    sortBy: 'goals' | 'assists' | 'combined' | 'goalsPerGame' | 'assistsPerGame' | 'combinedPerGame';
     viewMode: 'cumulative' | 'singleGame';
     singleGameCategory: 'points' | 'assists' | 'combined';
   };
   onFiltersChange: (filters: {
-    startDate: string;
-    endDate: string;
+    weeks: string[];
     teamId: string;
     opponentTeamId: string;
-    sortBy: 'goals' | 'assists';
-    minPointsPerGame: string;
-    maxPointsPerGame: string;
-    minAssistsPerGame: string;
-    maxAssistsPerGame: string;
+    sortBy: 'goals' | 'assists' | 'combined' | 'goalsPerGame' | 'assistsPerGame' | 'combinedPerGame';
     viewMode: 'cumulative' | 'singleGame';
     singleGameCategory: 'points' | 'assists' | 'combined';
   }) => void;
@@ -41,6 +31,8 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
   const { activeLeague } = useLeague();
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
+  const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
+  const [isLoadingWeeks, setIsLoadingWeeks] = useState(true);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -65,10 +57,52 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
     fetchTeams();
   }, [activeLeague]);
 
+  useEffect(() => {
+    const fetchAvailableWeeks = async () => {
+      if (!activeLeague) {
+        setIsLoadingWeeks(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/sessions?leagueId=${activeLeague.id}`);
+        if (response.ok) {
+          const sessions = await response.json();
+          const weeks = sessions
+            .map((s: any) => s.week)
+            .filter((w: any) => w !== null && w !== undefined)
+            .sort((a: number, b: number) => a - b);
+          const uniqueWeeks = Array.from(new Set<number>(weeks));
+          setAvailableWeeks(uniqueWeeks);
+        }
+      } catch (err) {
+        console.error('Error fetching weeks:', err);
+      } finally {
+        setIsLoadingWeeks(false);
+      }
+    };
+
+    fetchAvailableWeeks();
+  }, [activeLeague]);
+
   const handleFilterChange = (key: string, value: string) => {
     onFiltersChange({
       ...filters,
       [key]: value,
+    });
+  };
+
+  const handleWeeksChange = (weekValue: string) => {
+    const currentWeeks = filters.weeks || [];
+    const weekExists = currentWeeks.includes(weekValue);
+
+    const newWeeks = weekExists
+      ? currentWeeks.filter(w => w !== weekValue)
+      : [...currentWeeks, weekValue];
+
+    onFiltersChange({
+      ...filters,
+      weeks: newWeeks,
     });
   };
 
@@ -113,39 +147,49 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <div>
-          <label
-            htmlFor="startDate"
-            className="block text-sm text-text-secondary mb-2"
-          >
-            Start Date
-          </label>
-          <input
-            type="date"
-            id="startDate"
-            value={filters.startDate}
-            onChange={(e) => handleFilterChange('startDate', e.target.value)}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+          <div className="col-span-full mb-4">
+            <label className="block text-sm text-text-secondary mb-2">
+              Filter by Week
+            </label>
+            {isLoadingWeeks ? (
+              <div className="text-sm text-text-secondary">Loading weeks...</div>
+            ) : availableWeeks.length === 0 ? (
+              <div className="text-sm text-text-secondary">
+                No weeks assigned yet. Assign weeks to sessions to filter by week.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {availableWeeks.map((week) => {
+                  const isSelected = filters.weeks.includes(week.toString());
+                  return (
+                    <button
+                      key={week}
+                      type="button"
+                      onClick={() => handleWeeksChange(week.toString())}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        isSelected
+                          ? 'bg-accent-primary text-white'
+                          : 'bg-bg-tertiary text-text-secondary hover:bg-bg-tertiary/70'
+                      }`}
+                    >
+                      Week {week}
+                    </button>
+                  );
+                })}
+                {filters.weeks.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onFiltersChange({ ...filters, weeks: [] })}
+                    className="px-3 py-1.5 rounded-md text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
-        <div>
-          <label
-            htmlFor="endDate"
-            className="block text-sm text-text-secondary mb-2"
-          >
-            End Date
-          </label>
-          <input
-            type="date"
-            id="endDate"
-            value={filters.endDate}
-            onChange={(e) => handleFilterChange('endDate', e.target.value)}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label
             htmlFor="teamFilter"
@@ -209,91 +253,17 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
             id="sortBy"
             value={filters.sortBy}
             onChange={(e) =>
-              handleFilterChange('sortBy', e.target.value as 'goals' | 'assists')
+              handleFilterChange('sortBy', e.target.value)
             }
             className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
           >
             <option value="goals">Goals</option>
             <option value="assists">Assists</option>
+            <option value="combined">Goals + Assists</option>
+            <option value="goalsPerGame">Goals/Game</option>
+            <option value="assistsPerGame">Assists/Game</option>
+            <option value="combinedPerGame">Goals + Assists/Game</option>
           </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div>
-          <label
-            htmlFor="minPointsPerGame"
-            className="block text-sm text-text-secondary mb-2"
-          >
-            Min Points Per Game
-          </label>
-          <input
-            type="number"
-            id="minPointsPerGame"
-            min="0"
-            step="0.1"
-            value={filters.minPointsPerGame}
-            onChange={(e) => handleFilterChange('minPointsPerGame', e.target.value)}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
-            placeholder="0.0"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="maxPointsPerGame"
-            className="block text-sm text-text-secondary mb-2"
-          >
-            Max Points Per Game
-          </label>
-          <input
-            type="number"
-            id="maxPointsPerGame"
-            min="0"
-            step="0.1"
-            value={filters.maxPointsPerGame}
-            onChange={(e) => handleFilterChange('maxPointsPerGame', e.target.value)}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
-            placeholder="∞"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="minAssistsPerGame"
-            className="block text-sm text-text-secondary mb-2"
-          >
-            Min Assists Per Game
-          </label>
-          <input
-            type="number"
-            id="minAssistsPerGame"
-            min="0"
-            step="0.1"
-            value={filters.minAssistsPerGame}
-            onChange={(e) => handleFilterChange('minAssistsPerGame', e.target.value)}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
-            placeholder="0.0"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="maxAssistsPerGame"
-            className="block text-sm text-text-secondary mb-2"
-          >
-            Max Assists Per Game
-          </label>
-          <input
-            type="number"
-            id="maxAssistsPerGame"
-            min="0"
-            step="0.1"
-            value={filters.maxAssistsPerGame}
-            onChange={(e) => handleFilterChange('maxAssistsPerGame', e.target.value)}
-            className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
-            placeholder="∞"
-          />
         </div>
       </div>
         </>

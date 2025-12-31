@@ -106,6 +106,12 @@ export const PlayerLeaderboard = ({ stats, viewMode, singleGameCategory }: Playe
                   >
                     Assists/Game
                   </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Goals + Assists/Game
+                  </th>
                 </>
               )}
             </tr>
@@ -169,6 +175,9 @@ export const PlayerLeaderboard = ({ stats, viewMode, singleGameCategory }: Playe
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary text-right">
                         {player.assistsPerGame?.toFixed(2) ?? '0.00'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-accent-secondary text-right">
+                        {((player.pointsPerGame ?? 0) + (player.assistsPerGame ?? 0)).toFixed(2)}
                       </td>
                     </>
                   )}
