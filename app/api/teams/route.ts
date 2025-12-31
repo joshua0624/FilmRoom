@@ -21,7 +21,62 @@ export async function GET(request: NextRequest) {
     // Optional league filter
     const { searchParams } = new URL(request.url);
     const leagueId = searchParams.get('leagueId');
+    const isGuest = (session.user as any)?.isGuest || false;
 
+    // If leagueId is provided and user is a guest
+    if (leagueId && isGuest) {
+      // Verify the league is public
+      const league = await prisma.league.findUnique({
+        where: { id: leagueId },
+        select: { isPublic: true },
+      });
+
+      if (!league || !league.isPublic) {
+        return NextResponse.json(
+          { error: 'Guests can only access public leagues' },
+          { status: 403 }
+        );
+      }
+
+      // Return all teams in the public league
+      const teams = await prisma.team.findMany({
+        where: {
+          leagueId,
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                },
+              },
+            },
+          },
+          players: true,
+          _count: {
+            select: {
+              members: true,
+              players: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return NextResponse.json(teams);
+    }
+
+    // For regular users (or guests without leagueId), use existing filtering
     const teams = await prisma.team.findMany({
       where: {
         ...(leagueId ? { leagueId } : {}),
