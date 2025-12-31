@@ -1053,12 +1053,10 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
           {/* Double-tap skip feedback */}
           {skipFeedback && (
             <div
-              className={`absolute inset-0 flex items-center justify-center z-[100001] pointer-events-none ${
-                skipFeedback.direction === 'back' ? 'bg-blue-500' : 'bg-green-500'
-              } bg-opacity-30 transition-opacity`}
+              className="absolute inset-0 flex items-center justify-center z-[100001] pointer-events-none transition-opacity"
             >
-              <div className="text-white text-4xl font-bold">
-                {skipFeedback.direction === 'back' ? '⏪ -10s' : '⏩ +10s'}
+              <div className="text-white text-4xl font-bold bg-black bg-opacity-50 px-6 py-3 rounded-lg">
+                {skipFeedback.direction === 'back' ? '-10s' : '+10s'}
               </div>
             </div>
           )}
@@ -1302,12 +1300,10 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
                 {/* Double-tap skip feedback */}
                 {skipFeedback && !isFullscreen && (
                   <div
-                    className={`absolute inset-0 flex items-center justify-center z-20 pointer-events-none ${
-                      skipFeedback.direction === 'back' ? 'bg-blue-500' : 'bg-green-500'
-                    } bg-opacity-30 transition-opacity`}
+                    className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none transition-opacity"
                   >
-                    <div className="text-white text-4xl font-bold">
-                      {skipFeedback.direction === 'back' ? '⏪ -10s' : '⏩ +10s'}
+                    <div className="text-white text-4xl font-bold bg-black bg-opacity-50 px-6 py-3 rounded-lg">
+                      {skipFeedback.direction === 'back' ? '-10s' : '+10s'}
                     </div>
                   </div>
                 )}

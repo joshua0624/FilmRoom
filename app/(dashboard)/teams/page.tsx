@@ -32,9 +32,15 @@ export default function TeamsPage() {
       return;
     }
     if (status === 'authenticated') {
+      // Redirect guests to guest page
+      const isGuest = (session?.user as any)?.isGuest || false;
+      if (isGuest) {
+        router.push('/guest');
+        return;
+      }
       fetchTeams();
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   const fetchTeams = async () => {
     try {

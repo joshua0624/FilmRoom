@@ -8,6 +8,22 @@ interface Team {
   name: string;
 }
 
+interface League {
+  id: string;
+  name: string;
+  creatorId: string;
+  isPublic: boolean;
+  createdAt: string;
+  creator: {
+    id: string;
+    username: string;
+  };
+  _count?: {
+    teams: number;
+    sessions: number;
+  };
+}
+
 interface StatsFiltersProps {
   filters: {
     weeks: string[];
@@ -25,10 +41,14 @@ interface StatsFiltersProps {
     viewMode: 'cumulative' | 'singleGame';
     singleGameCategory: 'points' | 'assists' | 'combined';
   }) => void;
+  league?: League | null;
 }
 
-export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) => {
+export const StatsFilters = ({ filters, onFiltersChange, league }: StatsFiltersProps) => {
   const { activeLeague } = useLeague();
+  // Use the passed league prop if available, otherwise fall back to activeLeague from context
+  const currentLeague = league !== undefined ? league : activeLeague;
+
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
   const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
@@ -36,13 +56,13 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
 
   useEffect(() => {
     const fetchTeams = async () => {
-      if (!activeLeague) {
+      if (!currentLeague) {
         setIsLoadingTeams(false);
         return;
       }
 
       try {
-        const response = await fetch(`/api/teams?leagueId=${activeLeague.id}`);
+        const response = await fetch(`/api/teams?leagueId=${currentLeague.id}`);
         if (response.ok) {
           const data = await response.json();
           setTeams(data);
@@ -55,17 +75,17 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
     };
 
     fetchTeams();
-  }, [activeLeague]);
+  }, [currentLeague]);
 
   useEffect(() => {
     const fetchAvailableWeeks = async () => {
-      if (!activeLeague) {
+      if (!currentLeague) {
         setIsLoadingWeeks(false);
         return;
       }
 
       try {
-        const response = await fetch(`/api/sessions?leagueId=${activeLeague.id}`);
+        const response = await fetch(`/api/sessions?leagueId=${currentLeague.id}`);
         if (response.ok) {
           const sessions = await response.json();
           const weeks = sessions
@@ -83,7 +103,7 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
     };
 
     fetchAvailableWeeks();
-  }, [activeLeague]);
+  }, [currentLeague]);
 
   const handleFilterChange = (key: string, value: string) => {
     onFiltersChange({

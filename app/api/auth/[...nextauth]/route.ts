@@ -15,6 +15,15 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Handle guest mode
+        if (credentials.username === 'guest' && credentials.password === 'guest-mode-access') {
+          return {
+            id: 'guest',
+            name: 'Guest',
+            email: null,
+          };
+        }
+
         const user = await getUserByUsername(credentials.username);
 
         if (!user) {
@@ -50,6 +59,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.name = user.name;
+        token.isGuest = user.id === 'guest';
       }
       return token;
     },
@@ -57,6 +67,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.name = token.name as string;
+        (session.user as any).isGuest = token.isGuest || false;
       }
       return session;
     },

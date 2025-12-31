@@ -32,13 +32,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Validate user is member of the league
-    const hasLeagueAccess = await isLeagueMember(session.user.id, leagueId);
-    if (!hasLeagueAccess) {
-      return NextResponse.json(
-        { error: 'You do not have access to this league' },
-        { status: 403 }
-      );
+    const isGuest = (session.user as any)?.isGuest || false;
+
+    // For guest users, check if the league is public
+    if (isGuest) {
+      const league = await prisma.league.findUnique({
+        where: { id: leagueId },
+        select: { isPublic: true },
+      });
+
+      if (!league || !league.isPublic) {
+        return NextResponse.json(
+          { error: 'Guests can only access public leagues' },
+          { status: 403 }
+        );
+      }
+    } else {
+      // For regular users, validate they are a member of the league
+      const hasLeagueAccess = await isLeagueMember(session.user.id, leagueId);
+      if (!hasLeagueAccess) {
+        return NextResponse.json(
+          { error: 'You do not have access to this league' },
+          { status: 403 }
+        );
+      }
     }
 
     // Build week filter

@@ -10,6 +10,12 @@ export default async function SessionsPage() {
     redirect('/login');
   }
 
+  // Redirect guests to guest page
+  const isGuest = (session?.user as any)?.isGuest || false;
+  if (isGuest) {
+    redirect('/guest');
+  }
+
   return (
     <div className="min-h-screen bg-bg-primary">
       <Navigation />

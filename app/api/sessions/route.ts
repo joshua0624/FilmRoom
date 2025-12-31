@@ -11,6 +11,78 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const leagueId = searchParams.get('leagueId');
+    const isGuest = (session.user as any)?.isGuest || false;
+
+    // If leagueId is provided (e.g., from guest mode or stats filtering)
+    if (leagueId) {
+      // For guest users, check if the league is public
+      if (isGuest) {
+        const league = await prisma.league.findUnique({
+          where: { id: leagueId },
+          select: { isPublic: true },
+        });
+
+        if (!league || !league.isPublic) {
+          return NextResponse.json(
+            { error: 'Guests can only access public leagues' },
+            { status: 403 }
+          );
+        }
+      } else {
+        // For regular users, validate they are a member of the league
+        const hasLeagueAccess = await isLeagueMember(session.user.id, leagueId);
+        if (!hasLeagueAccess) {
+          return NextResponse.json(
+            { error: 'You do not have access to this league' },
+            { status: 403 }
+          );
+        }
+      }
+
+      // Fetch sessions for the specific league
+      const sessions = await prisma.filmSession.findMany({
+        where: {
+          leagueId,
+        },
+        include: {
+          teamA: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+            },
+          },
+          teamB: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+            },
+          },
+          creator: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+          _count: {
+            select: {
+              points: true,
+              notes: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return NextResponse.json(sessions);
+    }
+
+    // Default behavior: fetch sessions for leagues where user is a team member
     const sessions = await prisma.filmSession.findMany({
       where: {
         league: {

@@ -45,6 +45,29 @@ const LoginForm = () => {
     }
   };
 
+  const handleGuestMode = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await signIn('credentials', {
+        username: 'guest',
+        password: 'guest-mode-access',
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Failed to enter guest mode. Please try again.');
+      } else {
+        router.push('/guest');
+      }
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -122,6 +145,26 @@ const LoginForm = () => {
               {loading ? 'Logging in...' : 'Log In'}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-slate-800 text-slate-400">or</span>
+            </div>
+          </div>
+
+          {/* Guest Mode Button */}
+          <button
+            type="button"
+            onClick={handleGuestMode}
+            disabled={loading}
+            className="w-full h-11 bg-slate-700 hover:bg-slate-600 active:scale-[0.98] text-slate-200 font-medium rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-slate-600"
+          >
+            Continue as Guest
+          </button>
 
           {/* Sign Up Link */}
           <div className="mt-6 text-center">

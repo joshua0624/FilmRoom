@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all public leagues
+    // Get all public leagues (accessible by both regular users and guests)
     const publicLeagues = await prisma.league.findMany({
       where: {
         isPublic: true,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navigation } from '@/components/common/Navigation';
 import { CreateLeagueModal } from '@/components/leagues/CreateLeagueModal';
 import { EditLeagueModal } from '@/components/leagues/EditLeagueModal';
@@ -11,14 +12,25 @@ import { Button } from '@/components/common/Button';
 import { Plus, Users, Trophy, Settings, UserPlus } from 'lucide-react';
 
 export default function LeaguesPage() {
+  const router = useRouter();
   const { leagues, isLoading, refreshLeagues, setActiveLeague } = useLeague();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingLeague, setEditingLeague] = useState<any>(null);
   const [joiningLeague, setJoiningLeague] = useState<any>(null);
   const [browsableLeagues, setBrowsableLeagues] = useState<any[]>([]);
   const [isLoadingBrowse, setIsLoadingBrowse] = useState(false);
   const [showBrowse, setShowBrowse] = useState(false);
+
+  // Redirect guests to guest page
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const isGuest = (session?.user as any)?.isGuest || false;
+      if (isGuest) {
+        router.push('/guest');
+      }
+    }
+  }, [status, session, router]);
 
   const handleLeagueCreated = async (league: any) => {
     await refreshLeagues();
