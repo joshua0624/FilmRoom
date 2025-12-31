@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { emitToSession } from '@/lib/socket';
-import { updateActiveViewerPermission } from '@/lib/activeViewers';
 
 export async function GET(
   request: NextRequest,
@@ -119,7 +118,7 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Upsert active viewer (don't set canMarkPoints here - it will be calculated below)
+    // Upsert active viewer - all users can mark points
     const activeViewer = await prisma.activeViewer.upsert({
       where: {
         sessionId_userId: {
@@ -129,33 +128,13 @@ export async function POST(
       },
       update: {
         lastActive: new Date(),
+        canMarkPoints: true, // All users can mark points
       },
       create: {
         sessionId: id,
         userId: session.user.id,
         lastActive: new Date(),
-        canMarkPoints: false, // Will be recalculated below
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-          },
-        },
-      },
-    });
-
-    // Recalculate permissions to ensure only one eligible viewer can mark points
-    await updateActiveViewerPermission(id);
-
-    // Fetch updated viewer to get correct canMarkPoints value
-    const updatedViewer = await prisma.activeViewer.findUnique({
-      where: {
-        sessionId_userId: {
-          sessionId: id,
-          userId: session.user.id,
-        },
+        canMarkPoints: true, // All users can mark points
       },
       include: {
         user: {
@@ -168,25 +147,14 @@ export async function POST(
     });
 
     // Notify other viewers
-    if (updatedViewer) {
-      emitToSession(id, 'viewer-joined', {
-        viewer: {
-          userId: updatedViewer.userId,
-          username: updatedViewer.user.username,
-          canMarkPoints: updatedViewer.canMarkPoints,
-          joinedAt: updatedViewer.joinedAt,
-        },
-      });
-
-      // If permissions changed, notify all viewers
-      if (updatedViewer.canMarkPoints !== activeViewer.canMarkPoints) {
-        emitToSession(id, 'point-permission-changed', {});
-      }
-
-      return NextResponse.json(updatedViewer);
-    }
-
-    return NextResponse.json(activeViewer);
+    emitToSession(id, 'viewer-joined', {
+      viewer: {
+        userId: activeViewer.userId,
+        username: activeViewer.user.username,
+        canMarkPoints: activeViewer.canMarkPoints,
+        joinedAt: activeViewer.joinedAt,
+      },
+    });
 
     return NextResponse.json(activeViewer);
   } catch (error) {

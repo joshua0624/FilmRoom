@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { emitToSession } from '@/lib/socket';
+import { getUserTeamsInLeague, isLeagueMember } from '@/lib/leagueHelpers';
 
 export async function GET(
   request: NextRequest,
@@ -18,21 +19,10 @@ export async function GET(
     // Check if user has access to the session
     const filmSession = await prisma.filmSession.findUnique({
       where: { id },
-      include: {
-        teamA: {
-          include: {
-            members: {
-              where: { userId: session.user.id },
-            },
-          },
-        },
-        teamB: {
-          include: {
-            members: {
-              where: { userId: session.user.id },
-            },
-          },
-        },
+      select: {
+        id: true,
+        creatorId: true,
+        leagueId: true,
       },
     });
 
@@ -43,21 +33,38 @@ export async function GET(
       );
     }
 
+    // Check league membership
     const hasAccess =
       filmSession.creatorId === session.user.id ||
-      (filmSession.teamA?.members && filmSession.teamA.members.length > 0) ||
-      (filmSession.teamB?.members && filmSession.teamB.members.length > 0);
+      await isLeagueMember(session.user.id, filmSession.leagueId);
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
+    // Get user's teams in this league for team-only note filtering
+    const userTeams = await getUserTeamsInLeague(session.user.id, filmSession.leagueId);
+
     const notes = await prisma.note.findMany({
       where: {
         sessionId: id,
         OR: [
-          { isPrivate: false },
-          { createdByUserId: session.user.id },
+          { visibility: 'PUBLIC' },
+          {
+            AND: [
+              { visibility: 'TEAM_ONLY' },
+              {
+                createdBy: {
+                  teamMemberships: {
+                    some: {
+                      teamId: { in: userTeams },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          { createdByUserId: session.user.id }, // Always see own notes
         ],
       },
       include: {
@@ -96,11 +103,19 @@ export async function POST(
     }
 
     const body = await request.json();
-    let { timestamp, title, content, isPrivate } = body;
+    let { timestamp, title, content, visibility } = body;
 
     if (timestamp === undefined || !title || !content) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate visibility
+    if (visibility && visibility !== 'PUBLIC' && visibility !== 'TEAM_ONLY') {
+      return NextResponse.json(
+        { error: 'Invalid visibility. Must be PUBLIC or TEAM_ONLY' },
         { status: 400 }
       );
     }
@@ -127,21 +142,10 @@ export async function POST(
     // Check if user has access to the session
     const filmSession = await prisma.filmSession.findUnique({
       where: { id },
-      include: {
-        teamA: {
-          include: {
-            members: {
-              where: { userId: session.user.id },
-            },
-          },
-        },
-        teamB: {
-          include: {
-            members: {
-              where: { userId: session.user.id },
-            },
-          },
-        },
+      select: {
+        id: true,
+        creatorId: true,
+        leagueId: true,
       },
     });
 
@@ -152,10 +156,10 @@ export async function POST(
       );
     }
 
+    // Check league membership
     const hasAccess =
       filmSession.creatorId === session.user.id ||
-      (filmSession.teamA?.members && filmSession.teamA.members.length > 0) ||
-      (filmSession.teamB?.members && filmSession.teamB.members.length > 0);
+      await isLeagueMember(session.user.id, filmSession.leagueId);
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -167,7 +171,7 @@ export async function POST(
         timestamp: parseFloat(timestamp),
         title,
         content,
-        isPrivate: isPrivate || false,
+        visibility: visibility || 'PUBLIC', // Default to PUBLIC
         createdByUserId: session.user.id,
       },
       include: {

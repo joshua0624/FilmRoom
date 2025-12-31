@@ -7,7 +7,7 @@ interface Note {
   timestamp: number;
   title: string;
   content: string;
-  isPrivate: boolean;
+  visibility: 'PUBLIC' | 'TEAM_ONLY';
 }
 
 interface EditNoteModalProps {
@@ -25,7 +25,7 @@ export const EditNoteModal = ({
 }: EditNoteModalProps) => {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
-  const [isPrivate, setIsPrivate] = useState(note.isPrivate);
+  const [visibility, setVisibility] = useState<'PUBLIC' | 'TEAM_ONLY'>(note.visibility);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export const EditNoteModal = ({
     if (isOpen) {
       setTitle(note.title);
       setContent(note.content);
-      setIsPrivate(note.isPrivate);
+      setVisibility(note.visibility);
       setIsSaving(false);
       // Clear any pending auto-save when modal opens
       if (autoSaveTimeoutRef.current) {
@@ -56,7 +56,7 @@ export const EditNoteModal = ({
     // Set new timeout for auto-save (500ms debounce)
     autoSaveTimeoutRef.current = setTimeout(async () => {
       // Only auto-save if values have changed
-      if (title === note.title && content === note.content && isPrivate === note.isPrivate) {
+      if (title === note.title && content === note.content && visibility === note.visibility) {
         return;
       }
 
@@ -71,7 +71,7 @@ export const EditNoteModal = ({
           body: JSON.stringify({
             title,
             content,
-            isPrivate,
+            visibility,
           }),
         });
 
@@ -95,7 +95,7 @@ export const EditNoteModal = ({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [title, content, isPrivate, isOpen, note, onSuccess]);
+  }, [title, content, visibility, isOpen, note, onSuccess]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -120,7 +120,7 @@ export const EditNoteModal = ({
           body: JSON.stringify({
             title,
             content,
-            isPrivate,
+            visibility,
           }),
         }
       );
@@ -188,15 +188,33 @@ export const EditNoteModal = ({
           </div>
 
           <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={isPrivate}
-                onChange={(e) => setIsPrivate(e.target.checked)}
-                className="mr-2"
-              />
-              <span className="text-sm text-gray-700">Private note</span>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Visibility
             </label>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="PUBLIC"
+                  checked={visibility === 'PUBLIC'}
+                  onChange={() => setVisibility('PUBLIC')}
+                  className="w-4 h-4 cursor-pointer"
+                />
+                <span className="text-sm text-gray-700">Public (all league members)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="TEAM_ONLY"
+                  checked={visibility === 'TEAM_ONLY'}
+                  onChange={() => setVisibility('TEAM_ONLY')}
+                  className="w-4 h-4 cursor-pointer"
+                />
+                <span className="text-sm text-gray-700">Team only (my team members)</span>
+              </label>
+            </div>
           </div>
 
           {error && (

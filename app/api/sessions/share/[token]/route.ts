@@ -66,7 +66,7 @@ export async function GET(
         },
         notes: {
           where: {
-            isPrivate: false,
+            visibility: 'PUBLIC',
           },
           include: {
             createdBy: {

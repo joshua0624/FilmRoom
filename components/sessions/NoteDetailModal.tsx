@@ -9,7 +9,7 @@ interface Note {
   timestamp: number;
   title: string;
   content: string;
-  isPrivate: boolean;
+  visibility: 'PUBLIC' | 'TEAM_ONLY';
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -121,7 +121,7 @@ export const NoteDetailModal = ({
               {formatTime(note.timestamp)}
             </span>
           </div>
-          {note.isPrivate && (
+          {note.visibility === 'TEAM_ONLY' && (
             <div className="inline-block px-2 py-0.5 text-xs font-medium text-gray-700 bg-gray-100 rounded">
               Private
             </div>

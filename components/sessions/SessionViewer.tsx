@@ -47,7 +47,7 @@ interface Note {
   timestamp: number;
   title: string;
   content: string;
-  isPrivate: boolean;
+  visibility: 'PUBLIC' | 'TEAM_ONLY';
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -134,42 +134,15 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
     }
   }, [session?.id, socket]);
 
-  // Heartbeat: Update viewer activity every 30 seconds
+  // Allow all users to mark points
   useEffect(() => {
-    if (!session?.id) return;
+    if (!session) {
+      setCanMarkPoints(false);
+      return;
+    }
 
-    const interval = setInterval(() => {
-      fetch(`/api/sessions/${session.id}/viewers/heartbeat`, {
-        method: 'POST',
-      }).catch((err) => {
-        console.error('Error updating heartbeat:', err);
-      });
-    }, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [session?.id]);
-
-  // Fetch permission status
-  useEffect(() => {
-    if (!session?.id) return;
-
-    const fetchPermission = async () => {
-      try {
-        const response = await fetch(`/api/sessions/${session.id}/viewers`);
-        if (response.ok) {
-          const viewers = await response.json();
-          const currentUser = viewers.find((v: any) => v.user.id === userId);
-          setCanMarkPoints(currentUser?.canMarkPoints || false);
-        }
-      } catch (err) {
-        console.error('Error fetching permission:', err);
-      }
-    };
-
-    fetchPermission();
-    const interval = setInterval(fetchPermission, 5000); // Check every 5 seconds
-    return () => clearInterval(interval);
-  }, [session?.id, userId]);
+    setCanMarkPoints(true);
+  }, [session]);
 
   // Cleanup: remove viewer when component unmounts
   useEffect(() => {
@@ -371,19 +344,6 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
       // The ActiveViewers component will handle the refresh
     });
 
-    newSocket.on('point-permission-changed', () => {
-      // Refresh permission status when it changes
-      fetch(`/api/sessions/${sessionId}/viewers`)
-        .then((res) => res.json())
-        .then((viewers) => {
-          const currentUser = viewers.find((v: any) => v.user.id === userId);
-          setCanMarkPoints(currentUser?.canMarkPoints || false);
-        })
-        .catch((err) => {
-          console.error('Error fetching permission after change:', err);
-        });
-    });
-
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -508,11 +468,6 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
   }, [player]);
 
   const handleMarkPoint = (teamIdentifier: 'A' | 'B') => {
-    if (!canMarkPoints) {
-      toast.error('You do not have permission to mark points right now');
-      return;
-    }
-
     const currentPlayer = player || playerRef.current;
     let time = 0;
     
@@ -1399,11 +1354,6 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
                   onPointClick={handlePointClick}
                   onNoteClick={handleNoteClick}
                 />
-                {!canMarkPoints && (
-                  <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-accent-bg border border-accent-border rounded text-sm text-accent-secondary">
-                    <span>You don't have permission to mark points</span>
-                  </div>
-                )}
               </>
             )}
           </div>

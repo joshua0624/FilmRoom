@@ -39,7 +39,7 @@ interface Note {
   timestamp: number;
   title: string;
   content: string;
-  isPrivate: boolean;
+  visibility: 'PUBLIC' | 'TEAM_ONLY';
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;

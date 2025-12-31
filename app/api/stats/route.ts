@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
+import { isLeagueMember } from '@/lib/leagueHelpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +12,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const leagueId = searchParams.get('leagueId');
+    const teamId = searchParams.get('teamId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const opponentTeamId = searchParams.get('opponentTeamId');
@@ -21,6 +24,23 @@ export async function GET(request: NextRequest) {
     const maxAssistsPerGame = searchParams.get('maxAssistsPerGame');
     const viewMode = searchParams.get('viewMode') || 'cumulative';
     const singleGameCategory = searchParams.get('singleGameCategory') || 'points';
+
+    // Validate required leagueId parameter
+    if (!leagueId) {
+      return NextResponse.json(
+        { error: 'leagueId parameter is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate user is member of the league
+    const hasLeagueAccess = await isLeagueMember(session.user.id, leagueId);
+    if (!hasLeagueAccess) {
+      return NextResponse.json(
+        { error: 'You do not have access to this league' },
+        { status: 403 }
+      );
+    }
 
     // Build date filter
     const dateFilter: any = {};
@@ -33,7 +53,9 @@ export async function GET(request: NextRequest) {
 
     // Build session filter - include sessions with at least one preset roster
     // This ensures we're only counting stats from sessions with actual team rosters
+    // Also filter by league
     const baseFilter: any = {
+      leagueId,
       OR: [
         { teamAId: { not: null } },
         { teamBId: { not: null } },
@@ -97,8 +119,14 @@ export async function GET(request: NextRequest) {
     console.log(`[Stats API] Found ${points.length} points from ${sessionIds.length} sessions`);
     console.log(`[Stats API] Sample points:`, points.slice(0, 5));
 
-    // Get all players grouped by team to validate player names
+    // Get all players from the league (optionally filtered by team)
     const allPlayers = await prisma.player.findMany({
+      where: {
+        team: {
+          leagueId,
+          ...(teamId ? { id: teamId } : {}),
+        },
+      },
       select: {
         id: true,
         teamId: true,

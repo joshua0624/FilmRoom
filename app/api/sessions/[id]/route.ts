@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
+import { isLeagueMember } from '@/lib/leagueHelpers';
 
 export async function GET(
   request: NextRequest,
@@ -81,28 +82,11 @@ export async function GET(
       );
     }
 
-    // Check if user has access (creator or member of one of the teams)
+    // Check if user has access (creator or member of any team in the league)
     if (session?.user?.id) {
       const hasAccess =
         filmSession.creatorId === session.user.id ||
-        (filmSession.teamAId &&
-          (await prisma.teamMember.findUnique({
-            where: {
-              teamId_userId: {
-                teamId: filmSession.teamAId,
-                userId: session.user.id,
-              },
-            },
-          }))) ||
-        (filmSession.teamBId &&
-          (await prisma.teamMember.findUnique({
-            where: {
-              teamId_userId: {
-                teamId: filmSession.teamBId,
-                userId: session.user.id,
-              },
-            },
-          })));
+        await isLeagueMember(session.user.id, filmSession.leagueId);
 
       if (!hasAccess) {
         return NextResponse.json(

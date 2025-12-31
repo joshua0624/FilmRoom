@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Navigation } from '@/components/common/Navigation';
 import { StatsFilters } from '@/components/stats/StatsFilters';
 import { PlayerLeaderboard } from '@/components/stats/PlayerLeaderboard';
+import { useLeague } from '@/contexts/LeagueContext';
 
 interface PlayerStats {
   playerName: string;
@@ -17,12 +18,14 @@ interface PlayerStats {
 }
 
 export default function StatsPage() {
+  const { activeLeague } = useLeague();
   const [stats, setStats] = useState<PlayerStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
+    teamId: '',
     opponentTeamId: '',
     sortBy: 'goals' as 'goals' | 'assists',
     minPointsPerGame: '',
@@ -34,11 +37,20 @@ export default function StatsPage() {
   });
 
   const fetchStats = async () => {
+    if (!activeLeague) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
 
       const params = new URLSearchParams();
+      params.append('leagueId', activeLeague.id);
+      if (filters.teamId) {
+        params.append('teamId', filters.teamId);
+      }
       if (filters.startDate) {
         params.append('startDate', filters.startDate);
       }
@@ -83,7 +95,7 @@ export default function StatsPage() {
   useEffect(() => {
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+  }, [filters, activeLeague]);
 
   return (
     <div className="min-h-screen bg-bg-primary">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { LeagueProvider } from "@/contexts/LeagueContext";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
@@ -18,7 +19,11 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ErrorBoundary>
-          <SessionProvider>{children}</SessionProvider>
+          <SessionProvider>
+            <LeagueProvider>
+              {children}
+            </LeagueProvider>
+          </SessionProvider>
           <Toaster position="top-right" />
         </ErrorBoundary>
       </body>

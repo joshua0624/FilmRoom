@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Settings, ChevronLeft } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
+import { LeagueSelector } from '@/components/leagues/LeagueSelector';
 
 interface NavigationProps {
   showBackButton?: boolean;
@@ -25,12 +26,14 @@ export const Navigation = ({ showBackButton = false, backHref }: NavigationProps
   };
 
   const navLinks = [
+    { href: '/leagues', label: 'Leagues' },
     { href: '/teams', label: 'Teams' },
     { href: '/sessions', label: 'Sessions' },
     { href: '/stats', label: 'Stats' },
   ];
 
   const isActive = (href: string) => {
+    if (href === '/leagues' && pathname?.startsWith('/leagues')) return true;
     if (href === '/teams' && pathname?.startsWith('/teams')) return true;
     if (href === '/sessions' && pathname?.startsWith('/sessions')) return true;
     if (href === '/stats' && pathname?.startsWith('/stats')) return true;
@@ -81,17 +84,19 @@ export const Navigation = ({ showBackButton = false, backHref }: NavigationProps
 
           {/* Right Side */}
           <div className="flex items-center gap-4">
+            <LeagueSelector />
+
             <button
               className="text-text-secondary hover:text-text-primary transition-colors p-2"
               aria-label="Settings"
             >
               <Settings className="w-5 h-5" />
             </button>
-            
+
             <div className="text-sm text-text-secondary">
               {session?.user?.name || session?.user?.email || 'User'}
             </div>
-            
+
             <SignOutButton />
           </div>
         </div>

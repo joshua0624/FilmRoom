@@ -16,7 +16,7 @@ interface Note {
   timestamp: number;
   title: string;
   content: string;
-  isPrivate: boolean;
+  visibility: 'PUBLIC' | 'TEAM_ONLY';
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -58,9 +58,9 @@ export const Timeline = ({
   // Calculate progress percentage
   const progress = videoDuration > 0 ? (currentTime / videoDuration) * 100 : 0;
 
-  // Filter private notes - only show if user is the creator
+  // Backend handles visibility filtering, but keep client-side filter for safety
   const visibleNotes = notes.filter(
-    (note) => !note.isPrivate || note.createdBy?.id === userId
+    (note) => note.visibility === 'PUBLIC' || note.createdBy?.id === userId
   );
 
   // Combine and sort all markers by timestamp

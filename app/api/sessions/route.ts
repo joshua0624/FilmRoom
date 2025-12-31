@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { randomBytes } from 'crypto';
+import { isLeagueMember } from '@/lib/leagueHelpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,10 +13,9 @@ export async function GET(request: NextRequest) {
 
     const sessions = await prisma.filmSession.findMany({
       where: {
-        OR: [
-          { creatorId: session.user.id },
-          {
-            teamA: {
+        league: {
+          teams: {
+            some: {
               members: {
                 some: {
                   userId: session.user.id,
@@ -23,16 +23,7 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          {
-            teamB: {
-              members: {
-                some: {
-                  userId: session.user.id,
-                },
-              },
-            },
-          },
-        ],
+        },
       },
       include: {
         teamA: {
@@ -87,6 +78,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     let {
       youtubeUrl,
+      leagueId,
       teamAId,
       teamBId,
       teamACustomName,
@@ -95,10 +87,19 @@ export async function POST(request: NextRequest) {
       teamBColor,
     } = body;
 
-    if (!youtubeUrl || !teamAColor || !teamBColor) {
+    if (!youtubeUrl || !leagueId || !teamAColor || !teamBColor) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
+      );
+    }
+
+    // Validate user is member of the league
+    const hasLeagueAccess = await isLeagueMember(session.user.id, leagueId);
+    if (!hasLeagueAccess) {
+      return NextResponse.json(
+        { error: 'You must be a member of the league to create a session' },
+        { status: 403 }
       );
     }
 
@@ -142,21 +143,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate team IDs if provided
+    // Validate team IDs if provided (must belong to the league)
     if (teamAId) {
       const teamA = await prisma.team.findUnique({
         where: { id: teamAId },
-        include: {
-          members: {
-            where: { userId: session.user.id },
-          },
+        select: {
+          id: true,
+          leagueId: true,
         },
       });
 
-      if (!teamA || teamA.members.length === 0) {
+      if (!teamA) {
         return NextResponse.json(
-          { error: 'Team A not found or you are not a member' },
+          { error: 'Team A not found' },
           { status: 404 }
+        );
+      }
+
+      if (teamA.leagueId !== leagueId) {
+        return NextResponse.json(
+          { error: 'Team A does not belong to the selected league' },
+          { status: 400 }
         );
       }
     }
@@ -164,17 +171,23 @@ export async function POST(request: NextRequest) {
     if (teamBId) {
       const teamB = await prisma.team.findUnique({
         where: { id: teamBId },
-        include: {
-          members: {
-            where: { userId: session.user.id },
-          },
+        select: {
+          id: true,
+          leagueId: true,
         },
       });
 
-      if (!teamB || teamB.members.length === 0) {
+      if (!teamB) {
         return NextResponse.json(
-          { error: 'Team B not found or you are not a member' },
+          { error: 'Team B not found' },
           { status: 404 }
+        );
+      }
+
+      if (teamB.leagueId !== leagueId) {
+        return NextResponse.json(
+          { error: 'Team B does not belong to the selected league' },
+          { status: 400 }
         );
       }
     }
@@ -185,6 +198,7 @@ export async function POST(request: NextRequest) {
     const filmSession = await prisma.filmSession.create({
       data: {
         youtubeUrl,
+        leagueId,
         teamAId: teamAId || null,
         teamBId: teamBId || null,
         teamACustomName: teamACustomName || null,

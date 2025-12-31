@@ -18,6 +18,7 @@ model User {
   createdAt    DateTime  @default(now())
 
   createdTeams      Team[]         @relation("TeamCreator")
+  createdLeagues    League[]       @relation("LeagueCreator")
   teamMemberships   TeamMember[]
   createdSessions   FilmSession[]  @relation("SessionCreator")
   markedPoints      Point[]
@@ -32,9 +33,11 @@ model Team {
   name      String
   color     String
   creatorId String
+  leagueId  String
   createdAt DateTime @default(now())
 
   creator       User          @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  league        League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   members       TeamMember[]
   players       Player[]
   sessionsAsA   FilmSession[] @relation("TeamA")
@@ -76,12 +79,14 @@ model FilmSession {
   teamAColor      String
   teamBColor      String
   creatorId       String
+  leagueId        String
   createdAt       DateTime  @default(now())
   shareToken      String    @unique
 
   teamA       Team?         @relation("TeamA", fields: [teamAId], references: [id], onDelete: SetNull)
   teamB       Team?         @relation("TeamB", fields: [teamBId], references: [id], onDelete: SetNull)
   creator     User          @relation("SessionCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  league      League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   points      Point[]
   notes       Note[]
   activeViewers ActiveViewer[]
@@ -107,16 +112,21 @@ model Point {
   @@map("points")
 }
 
+enum NoteVisibility {
+  PUBLIC
+  TEAM_ONLY
+}
+
 model Note {
-  id              String   @id @default(cuid())
+  id              String         @id @default(cuid())
   sessionId       String
-  timestamp       Decimal  @db.Decimal(10, 2)
+  timestamp       Decimal        @db.Decimal(10, 2)
   title           String
   content         String
-  isPrivate       Boolean  @default(false)
+  visibility      NoteVisibility
   createdByUserId String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   session  FilmSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   createdBy User       @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
@@ -136,5 +146,20 @@ model ActiveViewer {
 
   @@id([sessionId, userId])
   @@map("active_viewers")
+}
+
+model League {
+  id           String   @id @default(cuid())
+  name         String
+  creatorId    String
+  passwordHash String?
+  isPublic     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  creator  User          @relation("LeagueCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  teams    Team[]
+  sessions FilmSession[]
+
+  @@map("leagues")
 }
 

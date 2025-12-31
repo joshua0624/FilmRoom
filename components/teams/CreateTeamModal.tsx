@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { validateTeamName, validateColor } from '@/lib/validation';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
+import { useLeague } from '@/contexts/LeagueContext';
 
 interface CreateTeamModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const CreateTeamModal = ({
   onClose,
   onSuccess,
 }: CreateTeamModalProps) => {
+  const { activeLeague } = useLeague();
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState('#DC2626'); // Default red
   const [loading, setLoading] = useState(false);
@@ -50,13 +52,18 @@ export const CreateTeamModal = ({
       return;
     }
 
+    if (!activeLeague) {
+      setError('Please select a league first');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await fetch('/api/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, color: selectedColor }),
+        body: JSON.stringify({ name, color: selectedColor, leagueId: activeLeague.id }),
       });
 
       if (!response.ok) {

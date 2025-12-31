@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { validateYouTubeUrl, validateTeamName, validateColor } from '@/lib/validation';
 import { toast } from 'sonner';
+import { useLeague } from '@/contexts/LeagueContext';
 
 interface Team {
   id: string;
@@ -21,6 +22,7 @@ export const CreateSessionModal = ({
   onClose,
   onSuccess,
 }: CreateSessionModalProps) => {
+  const { activeLeague } = useLeague();
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [teamAId, setTeamAId] = useState<string>('');
   const [teamBId, setTeamBId] = useState<string>('');
@@ -38,12 +40,17 @@ export const CreateSessionModal = ({
     if (isOpen) {
       fetchTeams();
     }
-  }, [isOpen]);
+  }, [isOpen, activeLeague]);
 
   const fetchTeams = async () => {
+    if (!activeLeague) {
+      setIsLoadingTeams(false);
+      return;
+    }
+
     try {
       setIsLoadingTeams(true);
-      const response = await fetch('/api/teams');
+      const response = await fetch(`/api/teams?leagueId=${activeLeague.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch teams');
       }
@@ -98,6 +105,11 @@ export const CreateSessionModal = ({
       return;
     }
 
+    if (!activeLeague) {
+      setError('Please select a league first');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -108,6 +120,7 @@ export const CreateSessionModal = ({
         },
         body: JSON.stringify({
           youtubeUrl,
+          leagueId: activeLeague.id,
           teamAId: teamAId || null,
           teamBId: teamBId || null,
           teamACustomName: teamACustomName || null,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLeague } from '@/contexts/LeagueContext';
 
 interface Team {
   id: string;
@@ -11,6 +12,7 @@ interface StatsFiltersProps {
   filters: {
     startDate: string;
     endDate: string;
+    teamId: string;
     opponentTeamId: string;
     sortBy: 'goals' | 'assists';
     minPointsPerGame: string;
@@ -23,6 +25,7 @@ interface StatsFiltersProps {
   onFiltersChange: (filters: {
     startDate: string;
     endDate: string;
+    teamId: string;
     opponentTeamId: string;
     sortBy: 'goals' | 'assists';
     minPointsPerGame: string;
@@ -35,13 +38,19 @@ interface StatsFiltersProps {
 }
 
 export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) => {
+  const { activeLeague } = useLeague();
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
 
   useEffect(() => {
     const fetchTeams = async () => {
+      if (!activeLeague) {
+        setIsLoadingTeams(false);
+        return;
+      }
+
       try {
-        const response = await fetch('/api/teams');
+        const response = await fetch(`/api/teams?leagueId=${activeLeague.id}`);
         if (response.ok) {
           const data = await response.json();
           setTeams(data);
@@ -54,7 +63,7 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
     };
 
     fetchTeams();
-  }, []);
+  }, [activeLeague]);
 
   const handleFilterChange = (key: string, value: string) => {
     onFiltersChange({
@@ -135,6 +144,32 @@ export const StatsFilters = ({ filters, onFiltersChange }: StatsFiltersProps) =>
             onChange={(e) => handleFilterChange('endDate', e.target.value)}
             className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
           />
+        </div>
+
+        <div>
+          <label
+            htmlFor="teamFilter"
+            className="block text-sm text-text-secondary mb-2"
+          >
+            Filter by Team
+          </label>
+          <select
+            id="teamFilter"
+            value={filters.teamId}
+            onChange={(e) => handleFilterChange('teamId', e.target.value)}
+            className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary focus:outline-none focus:border-accent-primary"
+          >
+            <option value="">All Players</option>
+            {isLoadingTeams ? (
+              <option>Loading...</option>
+            ) : (
+              teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name} players only
+                </option>
+              ))
+            )}
+          </select>
         </div>
 
         <div>

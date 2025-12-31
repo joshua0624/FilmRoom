@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { emitToSession } from '@/lib/socket';
 import { getPointMarker } from '@/lib/activeViewers';
+import { isLeagueMember } from '@/lib/leagueHelpers';
 
 export async function GET(
   request: NextRequest,
@@ -19,21 +20,10 @@ export async function GET(
     // Check if user has access to the session
     const filmSession = await prisma.filmSession.findUnique({
       where: { id },
-      include: {
-        teamA: {
-          include: {
-            members: {
-              where: { userId: session.user.id },
-            },
-          },
-        },
-        teamB: {
-          include: {
-            members: {
-              where: { userId: session.user.id },
-            },
-          },
-        },
+      select: {
+        id: true,
+        creatorId: true,
+        leagueId: true,
       },
     });
 
@@ -46,8 +36,7 @@ export async function GET(
 
     const hasAccess =
       filmSession.creatorId === session.user.id ||
-      (filmSession.teamA?.members && filmSession.teamA.members.length > 0) ||
-      (filmSession.teamB?.members && filmSession.teamB.members.length > 0);
+      (await isLeagueMember(session.user.id, filmSession.leagueId));
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -131,21 +120,10 @@ export async function POST(
     // Check if user has access to the session
     const filmSession = await prisma.filmSession.findUnique({
       where: { id },
-      include: {
-        teamA: {
-          include: {
-            members: {
-              where: { userId: session.user.id },
-            },
-          },
-        },
-        teamB: {
-          include: {
-            members: {
-              where: { userId: session.user.id },
-            },
-          },
-        },
+      select: {
+        id: true,
+        creatorId: true,
+        leagueId: true,
       },
     });
 
@@ -158,8 +136,7 @@ export async function POST(
 
     const hasAccess =
       filmSession.creatorId === session.user.id ||
-      (filmSession.teamA?.members && filmSession.teamA.members.length > 0) ||
-      (filmSession.teamB?.members && filmSession.teamB.members.length > 0);
+      (await isLeagueMember(session.user.id, filmSession.leagueId));
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });

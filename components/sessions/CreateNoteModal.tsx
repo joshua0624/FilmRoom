@@ -24,7 +24,7 @@ export const CreateNoteModal = ({
   console.log('CreateNoteModal render - isOpen:', isOpen, 'timestamp:', timestamp);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [visibility, setVisibility] = useState<'PUBLIC' | 'TEAM_ONLY'>('PUBLIC');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export const CreateNoteModal = ({
           body: JSON.stringify({
             title,
             content,
-            isPrivate,
+            visibility,
           }),
         });
 
@@ -80,7 +80,7 @@ export const CreateNoteModal = ({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [title, content, isPrivate, noteId, sessionId, onSuccess]);
+  }, [title, content, visibility, noteId, sessionId, onSuccess]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -124,7 +124,7 @@ export const CreateNoteModal = ({
           timestamp: Number(timestamp),
           title,
           content,
-          isPrivate,
+          visibility,
         }),
       });
 
@@ -150,7 +150,7 @@ export const CreateNoteModal = ({
   const resetForm = () => {
     setTitle('');
     setContent('');
-    setIsPrivate(false);
+    setVisibility('PUBLIC');
     setError(null);
     setNoteId(null);
     setIsSaving(false);
@@ -272,15 +272,33 @@ export const CreateNoteModal = ({
         </div>
 
         <div className="mb-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isPrivate}
-              onChange={(e) => setIsPrivate(e.target.checked)}
-              className="w-[18px] h-[18px] cursor-pointer"
-            />
-            <span className="text-sm text-text-primary">Mark as private</span>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            Visibility
           </label>
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="visibility"
+                value="PUBLIC"
+                checked={visibility === 'PUBLIC'}
+                onChange={() => setVisibility('PUBLIC')}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <span className="text-sm text-text-primary">Public (all league members)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="visibility"
+                value="TEAM_ONLY"
+                checked={visibility === 'TEAM_ONLY'}
+                onChange={() => setVisibility('TEAM_ONLY')}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <span className="text-sm text-text-primary">Team only (my team members)</span>
+            </label>
+          </div>
         </div>
 
         {error && (

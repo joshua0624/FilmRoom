@@ -9,7 +9,7 @@ interface Note {
   timestamp: number;
   title: string;
   content: string;
-  isPrivate: boolean;
+  visibility: 'PUBLIC' | 'TEAM_ONLY';
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
@@ -75,9 +75,9 @@ export const NotesPanel = ({
     }
   };
 
+  // Backend now handles visibility filtering, just deduplicate
   const visibleNotes = notes
-    .filter((note) => !note.isPrivate || note.createdBy.id === userId)
-    .filter((note, index, self) => 
+    .filter((note, index, self) =>
       index === self.findIndex((n) => n.id === note.id)
     );
 
@@ -108,9 +108,9 @@ export const NotesPanel = ({
                     <span className="text-sm text-accent-secondary font-medium">
                       {formatTime(note.timestamp)}
                     </span>
-                    {note.isPrivate && (
+                    {note.visibility === 'TEAM_ONLY' && (
                       <span className="px-2 py-0.5 text-xs font-medium text-text-secondary bg-bg-tertiary rounded">
-                        Private
+                        Team Only
                       </span>
                     )}
                   </div>

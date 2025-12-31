@@ -16,7 +16,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { timestamp, title, content, isPrivate } = body;
+    const { timestamp, title, content, visibility } = body;
 
     // Check if note exists and user is the creator
     const note = await prisma.note.findUnique({
@@ -43,7 +43,7 @@ export async function PATCH(
         ...(timestamp !== undefined && { timestamp: parseFloat(timestamp) }),
         ...(title && { title }),
         ...(content && { content }),
-        ...(isPrivate !== undefined && { isPrivate }),
+        ...(visibility && { visibility }),
       },
       include: {
         createdBy: {

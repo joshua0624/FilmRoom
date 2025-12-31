@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation';
 import { EditTeamModal } from './EditTeamModal';
 import { AddMemberModal } from './AddMemberModal';
 import { AddPlayerModal } from './AddPlayerModal';
+import { MigrateTeamModal } from './MigrateTeamModal';
 
 interface Team {
   id: string;
   name: string;
   color: string;
+  leagueId: string;
+  creatorId: string;
   creator: {
     id: string;
     username: string;
@@ -41,6 +44,7 @@ export const TeamDetail = ({ teamId, userId }: TeamDetailProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
+  const [isMigrateModalOpen, setIsMigrateModalOpen] = useState(false);
 
   const fetchTeam = async () => {
     try {
@@ -195,12 +199,20 @@ export const TeamDetail = ({ teamId, userId }: TeamDetailProps) => {
                 Edit
               </button>
               {isCreator && (
-                <button
-                  onClick={handleDeleteTeam}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-bg-primary"
-                >
-                  Delete
-                </button>
+                <>
+                  <button
+                    onClick={() => setIsMigrateModalOpen(true)}
+                    className="px-4 py-2 text-sm font-medium text-text-primary bg-bg-tertiary border border-border rounded-md hover:bg-border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-primary focus:ring-offset-bg-primary"
+                  >
+                    Migrate
+                  </button>
+                  <button
+                    onClick={handleDeleteTeam}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-bg-primary"
+                  >
+                    Delete
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -316,6 +328,14 @@ export const TeamDetail = ({ teamId, userId }: TeamDetailProps) => {
         onClose={() => setIsAddPlayerModalOpen(false)}
         onSuccess={fetchTeam}
         teamId={teamId}
+      />
+
+      <MigrateTeamModal
+        isOpen={isMigrateModalOpen}
+        onClose={() => setIsMigrateModalOpen(false)}
+        team={team}
+        userId={userId}
+        onSuccess={fetchTeam}
       />
     </div>
   );
