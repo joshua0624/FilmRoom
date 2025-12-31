@@ -1186,7 +1186,10 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
                           handleVideoContainerClick(e);
                         }}
                         onTouchEnd={(e) => {
-                          // Also handle touch events for mobile
+                          // Handle double-tap skip functionality first
+                          handleVideoDoubleTap(e);
+
+                          // Also handle single tap for play/pause
                           e.stopPropagation();
                           if (e.touches.length === 0 || e.changedTouches.length > 0) {
                             handleVideoContainerClick(e as any);
