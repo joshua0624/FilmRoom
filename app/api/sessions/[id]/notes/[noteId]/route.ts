@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { emitToSession } from '@/lib/socket';
+import { isLeagueAdmin } from '@/lib/leagueHelpers';
 
 export async function PATCH(
   request: NextRequest,
@@ -33,8 +34,18 @@ export async function PATCH(
       );
     }
 
-    if (note.createdByUserId !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Check if user can edit this note
+    // Users can edit if they are:
+    // 1. A league admin (or league creator)
+    // 2. The user who created the note
+    const isAdmin = await isLeagueAdmin(session.user.id, note.session.leagueId);
+    const isNoteCreator = note.createdByUserId === session.user.id;
+
+    if (!isAdmin && !isNoteCreator) {
+      return NextResponse.json(
+        { error: 'You can only edit notes you created, unless you are a league admin' },
+        { status: 403 }
+      );
     }
 
     const updatedNote = await prisma.note.update({
@@ -95,8 +106,18 @@ export async function DELETE(
       );
     }
 
-    if (note.createdByUserId !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Check if user can delete this note
+    // Users can delete if they are:
+    // 1. A league admin (or league creator)
+    // 2. The user who created the note
+    const isAdmin = await isLeagueAdmin(session.user.id, note.session.leagueId);
+    const isNoteCreator = note.createdByUserId === session.user.id;
+
+    if (!isAdmin && !isNoteCreator) {
+      return NextResponse.json(
+        { error: 'You can only delete notes you created, unless you are a league admin' },
+        { status: 403 }
+      );
     }
 
     await prisma.note.delete({

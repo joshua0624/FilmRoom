@@ -28,14 +28,10 @@ export const updateActiveViewerPermission = async (
     return;
   }
 
-  // Get all active viewers (active within last 30 seconds)
-  const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+  // Get all active viewers
   const activeViewers = await prisma.activeViewer.findMany({
     where: {
       sessionId,
-      lastActive: {
-        gte: thirtySecondsAgo,
-      },
     },
     orderBy: {
       joinedAt: 'asc',
@@ -96,9 +92,6 @@ export const getPointMarker = async (
     where: {
       sessionId,
       canMarkPoints: true,
-      lastActive: {
-        gte: new Date(Date.now() - 30 * 1000), // Active within last 30 seconds
-      },
     },
     include: {
       user: {

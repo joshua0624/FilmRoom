@@ -26,25 +26,21 @@ export async function GET(
       );
     }
 
-    // Clean up inactive viewers (inactive for more than 60 seconds)
-    const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
+    // Clean up inactive viewers (inactive for more than 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     await prisma.activeViewer.deleteMany({
       where: {
         sessionId: id,
         lastActive: {
-          lt: sixtySecondsAgo,
+          lt: fiveMinutesAgo,
         },
       },
     });
 
-    // Get all active viewers (active within last 30 seconds)
-    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+    // Get all active viewers
     const activeViewers = await prisma.activeViewer.findMany({
       where: {
         sessionId: id,
-        lastActive: {
-          gte: thirtySecondsAgo,
-        },
       },
       include: {
         user: {
@@ -201,36 +197,4 @@ export async function DELETE(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const session = await getSession();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Update lastActive timestamp
-    const activeViewer = await prisma.activeViewer.updateMany({
-      where: {
-        sessionId: id,
-        userId: session.user.id,
-      },
-      data: {
-        lastActive: new Date(),
-      },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error updating viewer activity:', error);
-    return NextResponse.json(
-      { error: 'Failed to update viewer activity' },
-      { status: 500 }
-    );
-  }
-}
 

@@ -76,21 +76,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(teams);
     }
 
-    // For regular users (or guests without leagueId), use existing filtering
+    // For regular users
+    // If leagueId is provided, return all teams in the league
+    // If no leagueId, return only teams the user is part of
     const teams = await prisma.team.findMany({
-      where: {
-        ...(leagueId ? { leagueId } : {}),
-        OR: [
-          { creatorId: session.user.id },
-          {
-            members: {
-              some: {
-                userId: session.user.id,
+      where: leagueId
+        ? {
+            // Return all teams in the league
+            leagueId,
+          }
+        : {
+            // Return only user's teams if no league filter
+            OR: [
+              { creatorId: session.user.id },
+              {
+                members: {
+                  some: {
+                    userId: session.user.id,
+                  },
+                },
               },
-            },
+            ],
           },
-        ],
-      },
       include: {
         creator: {
           select: {

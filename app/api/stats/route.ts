@@ -109,6 +109,21 @@ export async function GET(request: NextRequest) {
         id: true,
         teamAId: true,
         teamBId: true,
+        week: true,
+        teamA: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        teamB: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        teamACustomName: true,
+        teamBCustomName: true,
       },
     });
 
@@ -311,26 +326,33 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      // Find the best single game for each player based on category
+      // Build array of ALL games (not just best per player)
       const singleGameLeaders: Array<{
         playerName: string;
         singleGameValue: number;
         goals: number;
         assists: number;
         sessionId: string;
+        week: number | null;
+        opponent: string | null;
       }> = [];
 
-      singleGameStatsMap.forEach((sessions, playerName) => {
-        type BestSession = {
-          sessionId: string;
-          goals: number;
-          assists: number;
-          value: number;
-        };
-        
-        let bestSession: BestSession | null = null;
+      // Create a map of session details for quick lookup
+      const sessionDetailsMap = new Map(
+        sessions.map((s) => [
+          s.id,
+          {
+            week: s.week,
+            teamAId: s.teamAId,
+            teamBId: s.teamBId,
+            teamAName: s.teamA?.name || s.teamACustomName,
+            teamBName: s.teamB?.name || s.teamBCustomName,
+          },
+        ])
+      );
 
-        sessions.forEach((stats, sessionId) => {
+      singleGameStatsMap.forEach((playerSessions, playerName) => {
+        playerSessions.forEach((stats, sessionId) => {
           let value = 0;
           if (singleGameCategory === 'points') {
             value = stats.goals;
@@ -340,34 +362,36 @@ export async function GET(request: NextRequest) {
             value = stats.goals + stats.assists;
           }
 
-          if (!bestSession || value > bestSession.value) {
-            bestSession = {
-              sessionId,
-              goals: stats.goals,
-              assists: stats.assists,
-              value,
-            };
-          }
-        });
+          if (value > 0) {
+            const sessionDetails = sessionDetailsMap.get(sessionId);
 
-        if (bestSession !== null) {
-          const session: BestSession = bestSession;
-          if (session.value > 0) {
+            // Determine opponent based on player's team
+            // For now, we'll show "vs Team A/Team B" format
+            // If we need to determine which team the player is on, we'd need additional logic
+            let opponent = null;
+            if (sessionDetails) {
+              const teamAName = sessionDetails.teamAName || 'Team A';
+              const teamBName = sessionDetails.teamBName || 'Team B';
+              opponent = `${teamAName} vs ${teamBName}`;
+            }
+
             singleGameLeaders.push({
               playerName,
-              singleGameValue: session.value,
-              goals: session.goals,
-              assists: session.assists,
-              sessionId: session.sessionId,
+              singleGameValue: value,
+              goals: stats.goals,
+              assists: stats.assists,
+              sessionId,
+              week: sessionDetails?.week || null,
+              opponent,
             });
           }
-        }
+        });
       });
 
-      // Sort by single game value
+      // Sort by single game value (descending)
       singleGameLeaders.sort((a, b) => b.singleGameValue - a.singleGameValue);
 
-      console.log(`[Stats API] Returning ${singleGameLeaders.length} single game leaders`);
+      console.log(`[Stats API] Returning ${singleGameLeaders.length} single game performances`);
       return NextResponse.json(singleGameLeaders);
     }
 

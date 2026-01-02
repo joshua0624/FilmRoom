@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { toast } from 'sonner';
+import { UserCog, X, UserPlus } from 'lucide-react';
 
 interface League {
   id: string;
@@ -34,6 +35,11 @@ export const EditLeagueModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [admins, setAdmins] = useState<Array<{ userId: string; username: string; addedAt: string }>>([]);
+  const [creatorId, setCreatorId] = useState<string>('');
+  const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
+  const [newAdminUsername, setNewAdminUsername] = useState('');
+  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
 
   useEffect(() => {
     if (league && isOpen) {
@@ -42,8 +48,95 @@ export const EditLeagueModal = ({
       setPassword('');
       setChangePassword(false);
       setError(null);
+      fetchAdmins();
     }
   }, [league, isOpen]);
+
+  const fetchAdmins = async () => {
+    if (!league) return;
+
+    setIsLoadingAdmins(true);
+    try {
+      const response = await fetch(`/api/leagues/${league.id}/admins`);
+      if (response.ok) {
+        const data = await response.json();
+        setAdmins(data.admins || []);
+        setCreatorId(data.creatorId || '');
+      }
+    } catch (err) {
+      console.error('Error fetching admins:', err);
+    } finally {
+      setIsLoadingAdmins(false);
+    }
+  };
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!league || !newAdminUsername.trim()) return;
+
+    setIsAddingAdmin(true);
+    setError(null);
+
+    try {
+      // First, find the user by username
+      const userResponse = await fetch(`/api/users/search?username=${encodeURIComponent(newAdminUsername.trim())}`);
+
+      if (!userResponse.ok) {
+        throw new Error('User not found');
+      }
+
+      const userData = await userResponse.json();
+
+      // Add the user as admin
+      const response = await fetch(`/api/leagues/${league.id}/admins`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: userData.id }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to add admin');
+      }
+
+      toast.success(`${newAdminUsername} added as admin`);
+      setNewAdminUsername('');
+      fetchAdmins();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add admin';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsAddingAdmin(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (adminUserId: string, adminUsername: string) => {
+    if (!league) return;
+
+    if (!confirm(`Remove ${adminUsername} as admin?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/leagues/${league.id}/admins?userId=${adminUserId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to remove admin');
+      }
+
+      toast.success(`${adminUsername} removed as admin`);
+      fetchAdmins();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to remove admin';
+      toast.error(errorMessage);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,6 +395,68 @@ export const EditLeagueModal = ({
               )}
             </>
           )}
+
+          {/* Admin Management Section */}
+          <div className="mb-4 mt-6 pt-6 border-t border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <UserCog className="w-5 h-5 text-text-primary" />
+              <h4 className="text-sm font-semibold text-text-primary">League Admins</h4>
+            </div>
+
+            <p className="text-xs text-text-secondary mb-3">
+              Admins can delete any points and notes in this league.
+            </p>
+
+            {/* Current Admins List */}
+            {isLoadingAdmins ? (
+              <div className="mb-3 p-3 bg-bg-primary rounded border border-border">
+                <p className="text-sm text-text-tertiary">Loading admins...</p>
+              </div>
+            ) : (
+              <>
+                {admins.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {admins.map((admin) => (
+                      <div
+                        key={admin.userId}
+                        className="flex items-center justify-between p-2 bg-bg-primary rounded border border-border"
+                      >
+                        <span className="text-sm text-text-primary">{admin.username}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAdmin(admin.userId, admin.username)}
+                          className="text-red-500 hover:text-red-400 transition-colors p-1"
+                          aria-label={`Remove ${admin.username} as admin`}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Add New Admin */}
+            <form onSubmit={handleAddAdmin} className="flex gap-2">
+              <input
+                type="text"
+                value={newAdminUsername}
+                onChange={(e) => setNewAdminUsername(e.target.value)}
+                placeholder="Enter username to add as admin"
+                className="flex-1 px-3 py-2 bg-bg-primary border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary text-sm"
+              />
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={isAddingAdmin || !newAdminUsername.trim()}
+                className="flex items-center gap-1 !text-sm !py-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                {isAddingAdmin ? 'Adding...' : 'Add'}
+              </Button>
+            </form>
+          </div>
 
           {error && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-500 text-sm">

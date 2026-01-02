@@ -9,6 +9,8 @@ interface PlayerStats {
   assistsPerGame?: number;
   singleGameValue?: number;
   sessionId?: string;
+  week?: number | null;
+  opponent?: string | null;
 }
 
 interface PlayerLeaderboardProps {
@@ -55,6 +57,18 @@ export const PlayerLeaderboard = ({ stats, viewMode, singleGameCategory }: Playe
               </th>
               {viewMode === 'singleGame' ? (
                 <>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-left text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Week
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-left text-sm font-semibold text-text-secondary uppercase tracking-wider"
+                  >
+                    Opponent
+                  </th>
                   <th
                     scope="col"
                     className="px-6 py-4 text-right text-sm font-semibold text-text-secondary uppercase tracking-wider"
@@ -121,7 +135,7 @@ export const PlayerLeaderboard = ({ stats, viewMode, singleGameCategory }: Playe
               const isTopThree = index < 3;
               return (
                 <tr
-                  key={player.playerName}
+                  key={viewMode === 'singleGame' && player.sessionId ? `${player.playerName}-${player.sessionId}` : `${player.playerName}-${index}`}
                   className="transition-colors hover:bg-bg-tertiary/50"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -149,6 +163,12 @@ export const PlayerLeaderboard = ({ stats, viewMode, singleGameCategory }: Playe
                   </td>
                   {viewMode === 'singleGame' ? (
                     <>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+                        {player.week ? `Week ${player.week}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-text-primary">
+                        {player.opponent || '-'}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-accent-secondary text-right">
                         {player.singleGameValue ?? 0}
                       </td>

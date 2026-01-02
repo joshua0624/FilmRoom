@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { emitToSession } from '@/lib/socket';
+import { isLeagueAdmin } from '@/lib/leagueHelpers';
 
 export async function PATCH(
   request: NextRequest,
@@ -75,6 +76,20 @@ export async function PATCH(
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Check if user can edit this point
+    // Users can edit if they are:
+    // 1. A league admin (or league creator)
+    // 2. The user who marked the point
+    const isAdmin = await isLeagueAdmin(session.user.id, filmSession.leagueId);
+    const isPointCreator = point.markedByUserId === session.user.id;
+
+    if (!isAdmin && !isPointCreator) {
+      return NextResponse.json(
+        { error: 'You can only edit points you created, unless you are a league admin' },
+        { status: 403 }
+      );
     }
 
     const updatedPoint = await prisma.point.update({
@@ -174,6 +189,20 @@ export async function DELETE(
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Check if user can delete this point
+    // Users can delete if they are:
+    // 1. A league admin (or league creator)
+    // 2. The user who marked the point
+    const isAdmin = await isLeagueAdmin(session.user.id, filmSession.leagueId);
+    const isPointCreator = point.markedByUserId === session.user.id;
+
+    if (!isAdmin && !isPointCreator) {
+      return NextResponse.json(
+        { error: 'You can only delete points you created, unless you are a league admin' },
+        { status: 403 }
+      );
     }
 
     await prisma.point.delete({

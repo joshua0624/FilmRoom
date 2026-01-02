@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { emitToSession } from '@/lib/socket';
-import { getPointMarker } from '@/lib/activeViewers';
 import { isLeagueMember } from '@/lib/leagueHelpers';
 
 export async function GET(
@@ -142,20 +141,7 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Check if user has permission to mark points
-    const pointMarker = await getPointMarker(id);
-    if (!pointMarker || pointMarker.userId !== session.user.id) {
-      return NextResponse.json(
-        {
-          error: 'You do not have permission to mark points',
-          message: pointMarker
-            ? `Only ${pointMarker.username} can mark points right now`
-            : 'No one currently has permission to mark points',
-        },
-        { status: 403 }
-      );
-    }
-
+    // All league members can mark points for any team
     const point = await prisma.point.create({
       data: {
         sessionId: id,

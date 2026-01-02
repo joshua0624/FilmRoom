@@ -72,6 +72,41 @@ export async function isLeagueCreator(
 }
 
 /**
+ * Check if a user is a league admin
+ * @param userId - The user's ID
+ * @param leagueId - The league's ID
+ * @returns True if the user is an admin of the league (or is the creator)
+ */
+export async function isLeagueAdmin(
+  userId: string,
+  leagueId: string
+): Promise<boolean> {
+  // Check if user is the creator (creators are always admins)
+  const league = await prisma.league.findFirst({
+    where: {
+      id: leagueId,
+      creatorId: userId,
+    },
+  });
+
+  if (league) {
+    return true;
+  }
+
+  // Check if user is marked as admin
+  const leagueMember = await prisma.leagueMember.findUnique({
+    where: {
+      leagueId_userId: {
+        leagueId,
+        userId,
+      },
+    },
+  });
+
+  return leagueMember?.isAdmin ?? false;
+}
+
+/**
  * Get all leagues that a user is a member of (via team membership)
  * @param userId - The user's ID
  * @returns Array of league objects

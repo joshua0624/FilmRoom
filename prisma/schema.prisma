@@ -17,10 +17,11 @@ model User {
   passwordHash String
   createdAt    DateTime  @default(now())
 
-  createdTeams      Team[]         @relation("TeamCreator")
-  createdLeagues    League[]       @relation("LeagueCreator")
+  createdTeams      Team[]          @relation("TeamCreator")
+  createdLeagues    League[]        @relation("LeagueCreator")
   teamMemberships   TeamMember[]
-  createdSessions   FilmSession[]  @relation("SessionCreator")
+  leagueMemberships LeagueMember[]
+  createdSessions   FilmSession[]   @relation("SessionCreator")
   markedPoints      Point[]
   createdNotes      Note[]
   activeViewers     ActiveViewer[]
@@ -157,10 +158,24 @@ model League {
   isPublic     Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  creator  User          @relation("LeagueCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  creator  User            @relation("LeagueCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   teams    Team[]
   sessions FilmSession[]
+  admins   LeagueMember[]
 
   @@map("leagues")
+}
+
+model LeagueMember {
+  leagueId String
+  userId   String
+  isAdmin  Boolean  @default(false)
+  addedAt  DateTime @default(now())
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([leagueId, userId])
+  @@map("league_members")
 }
 

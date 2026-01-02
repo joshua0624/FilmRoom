@@ -67,6 +67,7 @@ interface FilmSession {
   teamAColor: string;
   teamBColor: string;
   shareToken: string;
+  leagueId: string;
   teamA: Team | null;
   teamB: Team | null;
   creator: {
@@ -110,6 +111,7 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
   const [skipFeedback, setSkipFeedback] = useState<{ show: boolean; direction: 'back' | 'forward' } | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isRetryingVideo, setIsRetryingVideo] = useState(false);
+  const [isLeagueAdmin, setIsLeagueAdmin] = useState(false);
   const playerRef = useRef<any>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -372,6 +374,19 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
       }
       const data = await response.json();
       setSession(data);
+
+      // Check if user is a league admin
+      if (data.leagueId) {
+        try {
+          const adminResponse = await fetch(`/api/leagues/${data.leagueId}/check-admin`);
+          if (adminResponse.ok) {
+            const adminData = await adminResponse.json();
+            setIsLeagueAdmin(adminData.isAdmin);
+          }
+        } catch (err) {
+          console.error('Error checking admin status:', err);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -1360,7 +1375,7 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
           {!isFullscreen && (
             <>
               <PointsList
-                points={session.points.filter((point, index, self) => 
+                points={session.points.filter((point, index, self) =>
                   index === self.findIndex((p) => p.id === point.id)
                 )}
                 teamA={session.teamA}
@@ -1370,6 +1385,7 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
                 teamAColor={session.teamAColor}
                 teamBColor={session.teamBColor}
                 userId={userId}
+                isLeagueAdmin={isLeagueAdmin}
                 onPointClick={handlePointClick}
                 onPointUpdated={handlePointUpdated}
                 onPointDeleted={handlePointDeleted}
@@ -1384,6 +1400,7 @@ export const SessionViewer = ({ sessionId, userId }: SessionViewerProps) => {
               <NotesPanel
                 notes={session.notes}
                 userId={userId}
+                isLeagueAdmin={isLeagueAdmin}
                 onNoteClick={handleNoteClickFromTimestamp}
                 onNoteUpdated={handleNoteUpdated}
                 onNoteDeleted={handleNoteDeleted}

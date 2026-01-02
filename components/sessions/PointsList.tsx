@@ -37,6 +37,7 @@ interface PointsListProps {
   teamAColor: string;
   teamBColor: string;
   userId: string;
+  isLeagueAdmin?: boolean;
   onPointClick: (timestamp: number) => void;
   onPointUpdated: (point: Point) => void;
   onPointDeleted: (pointId: string) => void;
@@ -52,6 +53,7 @@ export const PointsList = ({
   teamAColor,
   teamBColor,
   userId,
+  isLeagueAdmin = false,
   onPointClick,
   onPointUpdated,
   onPointDeleted,
@@ -166,7 +168,7 @@ export const PointsList = ({
                   <p className="text-sm text-text-secondary mb-1">{point.notes}</p>
                 )}
               </div>
-              {!readOnly && (
+              {!readOnly && (isLeagueAdmin || point.markedBy.id === userId) && (
                 <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => setEditingPoint(point)}

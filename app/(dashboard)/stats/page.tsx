@@ -18,6 +18,8 @@ interface PlayerStats {
   assistsPerGame?: number;
   singleGameValue?: number;
   sessionId?: string;
+  week?: number | null;
+  opponent?: string | null;
 }
 
 interface League {

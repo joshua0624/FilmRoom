@@ -22,6 +22,7 @@ interface Note {
 interface NotesPanelProps {
   notes: Note[];
   userId: string;
+  isLeagueAdmin?: boolean;
   onNoteClick: (timestamp: number) => void;
   onNoteUpdated: (note: Note) => void;
   onNoteDeleted: (noteId: string) => void;
@@ -31,6 +32,7 @@ interface NotesPanelProps {
 export const NotesPanel = ({
   notes,
   userId,
+  isLeagueAdmin = false,
   onNoteClick,
   onNoteUpdated,
   onNoteDeleted,
@@ -120,22 +122,26 @@ export const NotesPanel = ({
                     by {note.createdBy.username}
                   </div>
                 </div>
-                {!readOnly && note.createdBy.id === userId && (
+                {!readOnly && (note.createdBy.id === userId || isLeagueAdmin) && (
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => setEditingNote(note)}
-                      className="text-xs text-accent-secondary hover:text-accent-primary transition-colors"
-                      aria-label="Edit note"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(note.id)}
-                      className="text-xs text-red-500 hover:text-red-400 transition-colors"
-                      aria-label="Delete note"
-                    >
-                      Delete
-                    </button>
+                    {note.createdBy.id === userId && (
+                      <button
+                        onClick={() => setEditingNote(note)}
+                        className="text-xs text-accent-secondary hover:text-accent-primary transition-colors"
+                        aria-label="Edit note"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {(isLeagueAdmin || note.createdBy.id === userId) && (
+                      <button
+                        onClick={() => handleDelete(note.id)}
+                        className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                        aria-label="Delete note"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
